@@ -21,12 +21,12 @@
 }
 
 .message-wrapper {
-  border-top: 1px solid rgb(158, 174, 190);
   padding-top: 1rem;
   margin-top: 1rem;
 }
 
 .message-wrapper:first-child {
+  border-top: 1px solid rgb(158, 174, 190);
   border-top: none;
 }
 

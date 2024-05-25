@@ -14,11 +14,11 @@ import {
   doc,
   getDocs,
   updateDoc,
-  addDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { database } from "../database/setup";
 
-const ResponsesModal = ({ show, handleClose, uniqueId }) => {
+const ResponsesModal = ({ show, handleClose, uniqueId, loadResponses }) => {
   const [responses, setResponses] = useState([]);
   const [filteredResponses, setFilteredResponses] = useState([]);
   const [selectedResponse, setSelectedResponse] = useState(null);
@@ -27,22 +27,24 @@ const ResponsesModal = ({ show, handleClose, uniqueId }) => {
   const [filterText, setFilterText] = useState("");
 
   useEffect(() => {
-    if (uniqueId) {
+    if (show && uniqueId) {
       const fetchResponses = async () => {
         const userDocRef = doc(database, "users", uniqueId);
         const responsesCollectionRef = collection(userDocRef, "responses");
         const responseDocs = await getDocs(responsesCollectionRef);
-        const responsesData = responseDocs.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const responsesData = responseDocs.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Sort by creation time
         setResponses(responsesData);
         setFilteredResponses(responsesData);
       };
 
       fetchResponses();
     }
-  }, [uniqueId]);
+  }, [show, uniqueId]);
 
   const updateResponse = async () => {
     if (uniqueId && selectedResponse) {
@@ -63,6 +65,18 @@ const ResponsesModal = ({ show, handleClose, uniqueId }) => {
       setSelectedResponse(null);
       setEditedContent("");
       setEditedTitle("");
+    }
+  };
+
+  const deleteResponse = async (id) => {
+    if (uniqueId) {
+      const userDocRef = doc(database, "users", uniqueId);
+      const responseDocRef = doc(userDocRef, "responses", id);
+      await deleteDoc(responseDocRef);
+      const updatedResponses = responses.filter((resp) => resp.id !== id);
+      setResponses(updatedResponses);
+      setFilteredResponses(updatedResponses);
+      loadResponses(); // Refresh the responses in the parent component
     }
   };
 
@@ -139,21 +153,71 @@ const ResponsesModal = ({ show, handleClose, uniqueId }) => {
             {filteredResponses.map((response) => (
               <Col key={response.id} sm={12} md={6} lg={4} className="mb-3">
                 <Card
-                  style={{ height: "300px", cursor: "pointer" }}
-                  onMouseDown={() => {
-                    setSelectedResponse(response);
-                    setEditedTitle(response.title);
-                    setEditedContent(response.content);
+                  style={{
+                    height: "350px",
+                    overflow: "hidden",
+                    display: "flex",
+                    flexDirection: "column",
                   }}
                 >
-                  <Card.Body>
-                    <Card.Title>{response.title}</Card.Title>
-                    <Card.Text>
-                      {response.content.substring(0, 100)}...
-                    </Card.Text>
-                    <Card.Subtitle className="mb-2 text-muted">
-                      {new Date(response.createdAt).toLocaleString()}
-                    </Card.Subtitle>
+                  <Card.Body
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      height: "100%",
+                      padding: "1rem",
+                    }}
+                  >
+                    <div style={{ overflow: "hidden" }}>
+                      <Card.Title
+                        style={{
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {response.title}
+                      </Card.Title>
+                      <Card.Text
+                        style={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          // WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {response?.userMsg?.substring(0, 100)}
+                        <hr />
+                        {response?.original} <br />
+                        {response?.content?.substring(0, 100)}...
+                      </Card.Text>
+                    </div>
+                    <div style={{ marginTop: "auto", textAlign: "center" }}>
+                      <Card.Subtitle className="mb-2 text-muted">
+                        {new Date(response.createdAt).toLocaleString()}
+                      </Card.Subtitle>
+                      <Button
+                        variant="dark"
+                        size="sm"
+                        onMouseDown={() => {
+                          setSelectedResponse(response);
+                          setEditedTitle(response.title);
+                          setEditedContent(response.content);
+                        }}
+                      >
+                        View
+                      </Button>
+                      &nbsp; &nbsp;
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        onMouseDown={() => deleteResponse(response.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </Card.Body>
                 </Card>
               </Col>

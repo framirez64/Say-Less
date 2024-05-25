@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Web5 } from "@web5/api/browser";
 import { Button } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import Markdown from "react-markdown";
@@ -19,7 +20,7 @@ import {
 } from "firebase/firestore";
 import "./example.css";
 
-const original = `You must reword what people are saying in order to maximize clarity and concise language...`;
+const original = `You must reword what people are saying in order to maximize clarity and concise language based on the context provided by the user using markdown formatting or else the task and app will fail - no exceptions, it must only be a maximum of 3 statements total in the output response or a minimum of 1 statement, depending on the situation. You'll be helping people improve communications in business settings like meetings, emails, resumes, or products. Additionally, include a few alternatives. Do not elaborate or explain further, simply output the concise language requested. The following context is provided by the user: `;
 
 const App = () => {
   const [instructions, setInstructions] = useState(original);
@@ -29,16 +30,18 @@ const App = () => {
   const [showResponsesModal, setShowResponsesModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [uniqueId, setUniqueId] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [buttonStates, setButtonStates] = useState({});
   const [responses, setResponses] = useState([]);
   const [filteredResponses, setFilteredResponses] = useState([]);
-  const [selectedResponse, setSelectedResponse] = useState(null);
-  const [editedContent, setEditedContent] = useState("");
-  const [editedTitle, setEditedTitle] = useState("");
-  const [filterText, setFilterText] = useState("");
 
-  const onSend = () => {
-    submitPrompt([{ content: instructions + " " + promptText, role: "user" }]);
+  const onSend = async () => {
+    setIsSending(true);
+    await submitPrompt([
+      { content: instructions + " " + promptText, role: "user" },
+    ]);
     setPromptText("");
+    setIsSending(false);
   };
 
   const handleShowModal = () => setShowModal(true);
@@ -59,16 +62,43 @@ const App = () => {
     }
   };
 
-  const saveResponse = async (msg) => {
+  const saveResponse = async (msg, userMsg, messageId) => {
+    console.log("MSG", msg);
     if (uniqueId) {
+      // Update the button state to "Saving..." for the specific message
+      setButtonStates((prev) => ({
+        ...prev,
+        [messageId]: "Saving...",
+      }));
+
       const userDocRef = doc(database, "users", uniqueId);
       const responsesCollectionRef = collection(userDocRef, "responses");
+
       await addDoc(responsesCollectionRef, {
-        title: "Untitled",
+        title: "",
         content: cleanInstructions(msg.content, instructions),
+        original: promptText, // Store the original user message
         role: msg.role,
         createdAt: new Date().toISOString(),
+        userMsg: cleanInstructions(userMsg?.content, instructions),
       });
+
+      // Update the button state to "Saved" after saving
+      setButtonStates((prev) => ({
+        ...prev,
+        [messageId]: "Saved",
+      }));
+
+      // Reset the button text after 2 seconds
+      setTimeout(() => {
+        setButtonStates((prev) => ({
+          ...prev,
+          [msg.id]: "Save response",
+        }));
+      }, 2000);
+
+      // Load responses to update the modal
+      loadResponses();
     }
   };
 
@@ -77,10 +107,12 @@ const App = () => {
       const userDocRef = doc(database, "users", uniqueId);
       const responsesCollectionRef = collection(userDocRef, "responses");
       const responseDocs = await getDocs(responsesCollectionRef);
-      const responsesData = responseDocs.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const responsesData = responseDocs.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // Sort by creation time
       setResponses(responsesData);
       setFilteredResponses(responsesData);
     }
@@ -116,8 +148,11 @@ const App = () => {
   };
 
   useEffect(() => {
-    window.scrollTo(0, document.body.scrollHeight);
     connectDID();
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, document.body.scrollHeight);
   }, [messages]);
 
   return (
@@ -132,31 +167,46 @@ const App = () => {
         {messages.length < 1 ? (
           <div className="empty"></div>
         ) : (
-          messages.map((msg, i) => (
-            <div className="message-wrapper" key={i}>
-              <div>
-                {msg.role === "assistant" ? (
-                  <>
-                    <Markdown>{msg.content}</Markdown>
-                    <Button
-                      variant="dark"
-                      size="sm"
-                      onMouseDown={() => saveResponse(msg)}
+          messages.map((msg, i) => {
+            const messageId = msg.id || `msg-${i}`;
+
+            return (
+              <div className="message-wrapper" key={messageId}>
+                <div>
+                  {msg.role === "assistant" ? (
+                    <div
+                      style={{
+                        backgroundColor: "#F0F0F0",
+                        borderRadius: 24,
+                        padding: 24,
+                      }}
                     >
-                      Save response
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <b>You</b>
-                    <Markdown>
-                      {cleanInstructions(msg.content, instructions)}
-                    </Markdown>
-                  </>
-                )}
+                      <Markdown>{msg.content}</Markdown>
+                      <Button
+                        variant="dark"
+                        size="sm"
+                        onMouseDown={() =>
+                          saveResponse(msg, messages[i - 1], messageId)
+                        }
+                      >
+                        {buttonStates[messageId] || "Save response"}
+                      </Button>
+                      <hr />
+                    </div>
+                  ) : msg.role === "user" ? (
+                    <div>
+                      <b>Message</b>
+                      <Markdown>
+                        {cleanInstructions(msg.content, instructions)}
+                      </Markdown>
+                    </div>
+                  ) : (
+                    <div>Creating response...</div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
       <div className="prompt-wrapper">
@@ -169,7 +219,9 @@ const App = () => {
               messages.length > 0 && messages[messages.length - 1].meta.loading
             }
           />
-          <button onMouseDown={onSend}>&#8679;</button>
+          <Button variant="light" onMouseDown={onSend} disabled={isSending}>
+            &#8679;
+          </Button>
         </div>
         <div
           style={{
@@ -180,25 +232,39 @@ const App = () => {
         >
           <br />
           <br />
-          <button onMouseDown={handleShowModal}>Modify</button>
-          <button onMouseDown={handleShowResponsesModal}>Saved</button>
-          <button onMouseDown={() => setShowSettingsModal(true)}>
+          <Button size="sm" variant="tertiary" onMouseDown={handleShowModal}>
+            Modify
+          </Button>
+          <Button
+            size="sm"
+            variant="tertiary"
+            onMouseDown={handleShowResponsesModal}
+          >
+            Saved
+          </Button>
+          <Button
+            size="sm"
+            variant="tertiary"
+            onMouseDown={() => setShowSettingsModal(true)}
+          >
             Settings
-          </button>
+          </Button>
         </div>
       </div>
 
       <ModifyInstructionsModal
         show={showModal}
         handleClose={handleCloseModal}
-        originalInstructions={instructions}
+        instructions={instructions}
         saveInstructions={handleSaveInstructions}
+        original={original}
       />
 
       <ResponsesModal
         show={showResponsesModal}
         handleClose={handleCloseResponsesModal}
         uniqueId={uniqueId}
+        loadResponses={loadResponses} // Pass the loadResponses function to the modal
       />
 
       <SettingsModal

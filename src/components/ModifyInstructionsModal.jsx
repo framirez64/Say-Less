@@ -1,13 +1,14 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Modal, Button, Form } from "react-bootstrap";
 
 const ModifyInstructionsModal = ({
   show,
   handleClose,
-  originalInstructions,
+  instructions,
   saveInstructions,
+  original,
 }) => {
-  const [newInstructions, setNewInstructions] = useState(originalInstructions);
+  const [newInstructions, setNewInstructions] = useState("");
 
   const handleSave = () => {
     saveInstructions(newInstructions);
@@ -15,8 +16,12 @@ const ModifyInstructionsModal = ({
   };
 
   const handleReset = () => {
-    setNewInstructions(originalInstructions);
+    setNewInstructions(original);
   };
+
+  useEffect(() => {
+    setNewInstructions(instructions);
+  }, [instructions]);
 
   return (
     <Modal show={show} onHide={handleClose} centered>

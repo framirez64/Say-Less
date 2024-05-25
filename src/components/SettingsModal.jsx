@@ -7,7 +7,7 @@ import {
   FormControl,
   Alert,
 } from "react-bootstrap";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { database } from "../database/setup";
 
 const SettingsModal = ({ show, handleClose, updateUserId }) => {
@@ -24,21 +24,36 @@ const SettingsModal = ({ show, handleClose, updateUserId }) => {
     }
   }, []);
 
+  const isValidDID = (did) => {
+    return /^did:(key|dht|ion):/.test(did);
+  };
+
   const handleSave = async () => {
+    if (!isValidDID(inputId)) {
+      setError(
+        "Invalid DID. Please enter a DID starting with did:key, did:dht, or did:ion."
+      );
+      setAccountSwitchSuccess(false);
+
+      return;
+    }
+
     try {
       const userDocRef = doc(database, "users", inputId);
       const docSnap = await getDoc(userDocRef);
 
-      if (docSnap.exists()) {
-        localStorage.setItem("uniqueId", inputId);
-        updateUserId(inputId);
-        setCurrentId(inputId);
-        setAccountSwitchSuccess(true);
-        setError("");
-      } else {
-        setError("User ID not found. Please enter a valid ID.");
-        setAccountSwitchSuccess(false);
+      if (!docSnap.exists()) {
+        await setDoc(userDocRef, {
+          uniqueId: inputId,
+          createdAt: new Date().toISOString(),
+        });
       }
+
+      localStorage.setItem("uniqueId", inputId);
+      updateUserId(inputId);
+      setCurrentId(inputId);
+      setAccountSwitchSuccess(true);
+      setError("");
     } catch (err) {
       console.error("Error checking user ID:", err);
       setError("An error occurred. Please try again.");
@@ -58,8 +73,9 @@ const SettingsModal = ({ show, handleClose, updateUserId }) => {
         <Modal.Title>Settings</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        👋 You're using a decentralized identity to instantly launch inside of
-        social media. Keep this ID so you can share it across apps or networks!
+        👋&nbsp;You're using a decentralized identity to instantly launch inside
+        of social media. Keep this ID so you can share it across apps or
+        networks!
         <br />
         <br />
         {accountSwitchSuccess && (
