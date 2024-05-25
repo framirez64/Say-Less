@@ -36,12 +36,18 @@ const App = () => {
   const [filteredResponses, setFilteredResponses] = useState([]);
 
   const onSend = async () => {
-    setIsSending(true);
-    await submitPrompt([
-      { content: instructions + " " + promptText, role: "user" },
-    ]);
-    setPromptText("");
-    setIsSending(false);
+    try {
+      setIsSending(true);
+      await submitPrompt([
+        { content: instructions + " " + promptText, role: "user" },
+      ]);
+      setPromptText("");
+      setIsSending(false);
+    } catch (error) {
+      alert("failed to run. need to fix this later");
+      setPromptText(JSON.stringify({ error }));
+      setIsSending(false);
+    }
   };
 
   const handleShowModal = () => setShowModal(true);
@@ -193,15 +199,13 @@ const App = () => {
                       </Button>
                       <hr />
                     </div>
-                  ) : msg.role === "user" ? (
+                  ) : (
                     <div>
-                      <b>Message</b>
+                      {msg.role === "user" ? <b>Message</b> : null}
                       <Markdown>
                         {cleanInstructions(msg.content, instructions)}
                       </Markdown>
                     </div>
-                  ) : (
-                    <div>Creating response...</div>
                   )}
                 </div>
               </div>

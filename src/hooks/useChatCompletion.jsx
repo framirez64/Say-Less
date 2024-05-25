@@ -1,4 +1,4 @@
-import { useChatCompletion as useOpenAIChatCompletion } from "@aleph/openai-streaming-hooks";
+import { useChatCompletion as useOpenAIChatCompletion } from "./stream";
 
 const useChatCompletion = (config) => {
   return useOpenAIChatCompletion({
