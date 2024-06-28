@@ -161,6 +161,22 @@ const App = () => {
     window.scrollTo(0, document.body.scrollHeight);
   }, [messages]);
 
+  // Add an event listener for the enter key
+  useEffect(() => {
+    const handleKeyDown = (event) =>{
+      if (event.key === "Enter" && !isSending){
+        onSend();
+      }
+    };
+
+    window.addEventListener("keydown",handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown",handleKeyDown);
+    };
+  },[onSend,isSending]);
+
+
+
   return (
     <>
       <div className="chat-wrapper">
@@ -219,6 +235,12 @@ const App = () => {
             value={promptText}
             placeholder="Message"
             onChange={(event) => setPromptText(event.target.value)}
+            onKeyDown={(event) =>{
+              if (event.key === "Enter" && !isSending){
+                event.preventDefault();
+                onSend();
+              }
+            }}
             disabled={
               messages.length > 0 && messages[messages.length - 1].meta.loading
             }
