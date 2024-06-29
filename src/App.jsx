@@ -163,8 +163,12 @@ const App = () => {
 
   // Add an event listener for the enter key
   useEffect(() => {
-    const handleKeyDown = (event) =>{
-      if (event.key === "Enter" && !isSending){
+    const handleKeyDown = (event) => {
+      if (event.key === "Enter" && event.shiftKey) {
+        event.preventDefault();
+        setPromptText((prev) => prev + "\n");
+      } else if (event.key === "Enter" && !isSending) {
+        event.preventDefault();
         onSend();
       }
     };
@@ -235,8 +239,11 @@ const App = () => {
             value={promptText}
             placeholder="Message"
             onChange={(event) => setPromptText(event.target.value)}
-            onKeyDown={(event) =>{
-              if (event.key === "Enter" && !isSending){
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && event.shiftKey) {
+                event.preventDefault();
+                setPromptText((prev) => prev + "\n");
+              } else if (event.key === "Enter" && !isSending) {
                 event.preventDefault();
                 onSend();
               }
