@@ -165,9 +165,8 @@ const App = () => {
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Enter" && event.shiftKey) {
-        event.preventDefault();
         setPromptText((prev) => prev + "\n");
-      } else if (event.key === "Enter" && !isSending) {
+      } else if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
         onSend();
       }
@@ -242,7 +241,6 @@ const App = () => {
             onKeyDown={(event) => {
               if (event.key === "Enter" && event.shiftKey) {
                 event.preventDefault();
-                setPromptText((prev) => prev + "\n");
               } else if (event.key === "Enter" && !isSending) {
                 event.preventDefault();
                 onSend();
