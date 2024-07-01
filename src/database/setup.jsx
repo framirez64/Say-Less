@@ -10,12 +10,12 @@ import { getFirestore } from "firebase/firestore";
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: "say-less-ai.firebaseapp.com",
-  projectId: "say-less-ai",
-  storageBucket: "say-less-ai.appspot.com",
-  messagingSenderId: "532924917005",
-  appId: "1:532924917005:web:897ed21df12c61ddd6fc44",
-  measurementId: "G-QMM042N7JT",
+  authDomain: "say-less-forked-3c4d4.firebaseapp.com",
+  projectId: "say-less-forked-3c4d4",
+  storageBucket: "say-less-forked-3c4d4.appspot.com",
+  messagingSenderId: "16866609502",
+  appId: "1:16866609502:web:f80b39a9cc9c277c64a7cf",
+  measurementId: "G-TFFPJRRZER",
 };
 
 // Initialize Firebase

@@ -4,6 +4,11 @@
 
 from firebase_functions import https_fn
 from firebase_admin import initialize_app
+import firebase_admin
+from firebase_admin import credentials
+
+cred = credentials.Certificate("say-less-forked-3c4d4-firebase-adminsdk-g80n9-487b1aaa65.json")
+firebase_admin.initialize_app(cred)
 
 initialize_app()
 
